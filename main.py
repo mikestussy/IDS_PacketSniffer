@@ -1,9 +1,12 @@
 from scapy.all import *
 from scapy.layers.inet import *
+from scapy.layers.inet import TCP
 from scapy.sendrecv import sniff
 from scapy.layers.http import HTTP
 import socket
 import time
+
+failed_logins = {}
 
 #Intrusion Detection Functions
 def ddos_detection(packet):
@@ -48,8 +51,29 @@ def ddos_detection(packet):
             with open("ddos_packets.txt", "a") as f:
                 f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {packet.summary()}\n")
                 f.write("\n")
+
+def bruteforce_detection(packet):
+    global failed_logins
+    source_ip = None
+    if TCP in packet:
+        if packet[TCP].dport == 22 and packet[TCP].flags & 0x002 == 0x002:
+        # Increment the count of failed login attempts for this source IP address
+            source_ip = packet[IP].src
+            if source_ip in packet_handler.failed_logins:
+                failed_logins[source_ip] += 1
+        else:
+            failed_logins[source_ip] = 1
+
+        # Trigger an alert if the number of failed login attempts exceeds a certain threshold
+        if failed_logins[source_ip] > 10:
+            print(f"\033[91mBrute force attack detected from {source_ip}!\033[0m")
+            with open("bruteforce_detections.txt", "a") as f:
+                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {packet.summary()}\n")
+                f.write("\n")
+
 # Function to handle packets captured
 def packet_handler(packet):
+    bruteforce_detection(packet)
     ddos_detection(packet)
     print(packet.summary())
 
