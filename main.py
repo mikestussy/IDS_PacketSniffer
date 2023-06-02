@@ -75,7 +75,7 @@ def bruteforce_detection(packet):
 def packet_handler(packet):
     bruteforce_detection(packet)
     ddos_detection(packet)
-    print(packet.summary())
+    print(time.strftime('%H:%M:%S'), packet.summary())
 
 # Prompt for filter
 protocol = input("Enter protocol (TCP, UDP, ICMP, HTTP, or all): ")
