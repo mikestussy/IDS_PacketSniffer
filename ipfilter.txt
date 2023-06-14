@@ -1,0 +1,8 @@
+**CONFIGURATION**
+(If filter is on, it will only show filter IPs in sniffing)
+#FILTER SRC IP: OFF
+#FILTER PORTS: ON
+**ADDRESSES**
+**PORTS**
+443
+5353
