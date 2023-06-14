@@ -71,11 +71,95 @@ def bruteforce_detection(packet):
                 f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {packet.summary()}\n")
                 f.write("\n")
 
+#Function for IP filtering
+filterIPS = False #bool for ip filtering option
+filterPORTS = False #bool for port filtering from src
+
+def read_filter_ips():
+    with open('ipfilter.txt', 'r') as f:
+        return [line.strip() for line in f.readlines()]
+filter_ips = read_filter_ips()
+if "#FILTER SRC IP: ON" in filter_ips:
+    filterIPS = True
+if "#FILTER PORTS: ON" in filter_ips:
+    filterPORTS = True
+
+if filterIPS == False:
+    if filterPORTS == False:
+        print(f"\033[37mPort Filtering:\033[0m", f"\033[31m OFF\033[0m")
+        print(f"\033[37mIP Filtering:\033[0m", f"\033[31m OFF\033[0m")
+
+if filterIPS == False:
+    if filterPORTS == True:
+        print(f"\033[37mPort Filtering:\033[0m", f"\033[34m ON\033[0m")
+        print(f"\033[37mIP Filtering:\033[0m", f"\033[31m OFF\033[0m")
+
+if filterIPS == True:
+    if filterPORTS == False:
+        print(f"\033[37mPort Filtering:\033[0m", f"\033[31m OFF\033[0m")
+        print(f"\033[37mIP Filtering:\033[0m", f"\033[34m ON\033[0m")
+
+if filterIPS == True:
+    if filterPORTS == True:
+        print(f"\033[37mPort Filtering:\033[0m", f"\033[34m ON\033[0m")
+        print(f"\033[37mIP Filtering:\033[0m", f"\033[34m ON\033[0m")
+
 # Function to handle packets captured
 def packet_handler(packet):
-    bruteforce_detection(packet)
-    ddos_detection(packet)
-    print(time.strftime('%H:%M:%S'), packet.summary())
+    source_ip = None
+    source_port = None
+
+##CONDITIONS FOR IP CHECKING/FILTERING##
+    ##IF PORT AND IP FILTERING IS ON
+    if filterIPS:
+        if filterPORTS:
+            if packet.haslayer(IP):
+                source_ip = packet[IP].src
+                if packet.haslayer(TCP):
+                    source_port = packet[TCP].sport
+                    if source_ip in filter_ips:
+                        if str(source_port) in filter_ips:
+                            bruteforce_detection(packet)
+                            ddos_detection(packet)
+                            print(time.strftime('%H:%M:%S'), packet.summary(),source_ip, ":", source_port, " >> ", packet[IP].dst,":",packet[UDP].dport)
+                if packet.haslayer(UDP):
+                    source_port = packet[UDP].sport
+                    if source_ip in filter_ips:
+                        if str(source_port) in filter_ips:
+                            bruteforce_detection(packet)
+                            ddos_detection(packet)
+                            print(time.strftime('%H:%M:%S'), packet.summary(),source_ip, ":", source_port, " >> ", packet[IP].dst,":",packet[UDP].dport)
+
+    ##IF PORT FILTERING ON AND IP FILTERING IS OFF
+    if filterIPS == False:
+        if filterPORTS:
+            if packet.haslayer(IP):
+                source_ip = packet[IP].src
+                if packet.haslayer(TCP):
+                    source_port = packet[TCP].sport
+                if packet.haslayer(UDP):
+                    source_port = packet[UDP].sport
+                if str(source_port) in filter_ips:
+                    bruteforce_detection(packet)
+                    ddos_detection(packet)
+                    print(time.strftime('%H:%M:%S'), packet.summary())
+
+    ##IF PORT FILTER OFF AND IP FILTERING IS ON
+    if filterIPS and filterPORTS == False:
+        if packet.haslayer(IP):
+            source_ip = packet[IP].src
+            if source_ip in filter_ips:
+                bruteforce_detection(packet)
+                ddos_detection(packet)
+                print(time.strftime('%H:%M:%S'), packet.summary())
+
+    ## IF NEITHER ARE ON, FILTER IS OFF
+    if filterIPS == False:
+        if filterPORTS == False:
+            bruteforce_detection(packet)
+            ddos_detection(packet)
+            print(time.strftime('%H:%M:%S'), packet.summary())
+
 
 # Prompt for filter
 protocol = input("Enter protocol (TCP, UDP, ICMP, HTTP, or all): ")
